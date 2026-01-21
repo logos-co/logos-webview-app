@@ -19,7 +19,6 @@
     pkgs.qt6.qtremoteobjects
     pkgs.qt6.qtdeclarative
     pkgs.qt6.qtwebview
-    pkgs.qt6.qtquick
     pkgs.zstd
     pkgs.krb5
     pkgs.abseil-cpp
