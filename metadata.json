@@ -5,6 +5,7 @@
   "author": "Logos Core Team",
   "type": "ui",
   "main": "webview_app",
+  "icon": ":/icons/webview.png",
   "dependencies": [],
   "category": "misc",
   "capabilities": []

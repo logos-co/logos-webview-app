@@ -4,5 +4,6 @@
         <file>WebView.qml</file>
         <file>local.html</file>
         <file alias="logos-script.js">js/logos-script.js</file>
+        <file>icons/webview.png</file>
     </qresource>
 </RCC>
