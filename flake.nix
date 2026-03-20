@@ -2,26 +2,24 @@
   description = "Logos WebView App Plugin";
 
   inputs = {
-    # Follow the same nixpkgs as logos-liblogos to ensure compatibility
-    nixpkgs.follows = "logos-liblogos/nixpkgs";
+    logos-nix.url = "github:logos-co/logos-nix";
+    nixpkgs.follows = "logos-nix/nixpkgs";
     logos-cpp-sdk.url = "github:logos-co/logos-cpp-sdk";
-    logos-liblogos.url = "github:logos-co/logos-liblogos";
   };
 
-  outputs = { self, nixpkgs, logos-cpp-sdk, logos-liblogos }:
+  outputs = { self, nixpkgs, logos-nix, logos-cpp-sdk }:
     let
       systems = [ "aarch64-darwin" "x86_64-darwin" "aarch64-linux" "x86_64-linux" ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f {
         pkgs = import nixpkgs { inherit system; };
         logosSdk = logos-cpp-sdk.packages.${system}.default;
-        logosLiblogos = logos-liblogos.packages.${system}.default;
       });
     in
     {
-      packages = forAllSystems ({ pkgs, logosSdk, logosLiblogos }:
+      packages = forAllSystems ({ pkgs, logosSdk }:
         let
-          common = import ./nix/default.nix { 
-            inherit pkgs logosSdk logosLiblogos; 
+          common = import ./nix/default.nix {
+            inherit pkgs logosSdk;
           };
           src = ./.;
           
