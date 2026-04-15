@@ -1,0 +1,23 @@
+#include <QUrl>
+#include <QVariantList>
+#include <QVariantMap>
+
+class WebViewApp
+{
+    PROP(QString statusText READONLY)
+    PROP(QUrl currentUrl READONLY)
+    PROP(bool ready READONLY)
+
+    // Navigation
+    SLOT(void loadUrl(QUrl url))
+    SLOT(void loadHtmlContent(QString html))
+    SLOT(void runJavaScript(QString script))
+
+    // Logos bridge: JS -> module calls
+    SLOT(void handleLogosRequest(QString moduleName, QString methodName, QVariantList args, int requestId))
+
+    // Events: backend -> QML/JS
+    SIGNAL(logosResponse(int requestId, QVariant result, QString error))
+    SIGNAL(logosEvent(QString eventName, QVariantMap data))
+    SIGNAL(statusChanged(QString text))
+}
