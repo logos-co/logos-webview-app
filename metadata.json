@@ -1,12 +1,20 @@
 {
   "name": "webview_app",
   "version": "1.0.0",
-  "description": "WebView plugin",
-  "author": "Logos Core Team",
-  "type": "ui",
-  "main": "webview_app",
-  "icon": ":/icons/webview.png",
-  "dependencies": [],
+  "type": "ui_qml",
   "category": "misc",
-  "capabilities": []
+  "description": "WebView plugin with JavaScript-to-Logos bridge",
+  "author": "Logos Core Team",
+  "icon": "src/icons/webview.png",
+  "view": "qml/WebView.qml",
+  "dependencies": [],
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": ["qt6.qtdeclarative", "qt6.qtwebview"]
+    },
+    "external_libraries": [],
+    "cmake": { "find_packages": [], "extra_sources": [] }
+  }
 }

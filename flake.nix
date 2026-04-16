@@ -1,35 +1,15 @@
 {
-  description = "Logos WebView App Plugin";
+  description = "Logos WebView App — pure QML module (no C++ backend)";
 
   inputs = {
-    logos-nix.url = "github:logos-co/logos-nix";
-    nixpkgs.follows = "logos-nix/nixpkgs";
-    logos-cpp-sdk.url = "github:logos-co/logos-cpp-sdk";
+    logos-module-builder.url = "github:logos-co/logos-module-builder";
+    nix-bundle-lgx.url = "github:logos-co/nix-bundle-lgx";
   };
 
-  outputs = { self, nixpkgs, logos-nix, logos-cpp-sdk }:
-    let
-      systems = [ "aarch64-darwin" "x86_64-darwin" "aarch64-linux" "x86_64-linux" ];
-      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f {
-        pkgs = import nixpkgs { inherit system; };
-        logosSdk = logos-cpp-sdk.packages.${system}.default;
-      });
-    in
-    {
-      packages = forAllSystems ({ pkgs, logosSdk }:
-        let
-          common = import ./nix/default.nix {
-            inherit pkgs logosSdk;
-          };
-          src = ./.;
-          
-          lib = import ./nix/lib.nix {
-            inherit pkgs common src;
-          };
-        in
-        {
-          default = lib;
-        }
-      );
+  outputs = inputs@{ logos-module-builder, ... }:
+    logos-module-builder.lib.mkLogosQmlModule {
+      src = ./.;
+      configFile = ./metadata.json;
+      flakeInputs = inputs;
     };
 }
