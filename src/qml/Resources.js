@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+.pragma library
+var localHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -147,11 +148,11 @@
 <body>
     <div class="container">
         <h1>🔗 Logos Bridge Demo</h1>
-        
+
         <div id="status" class="status-bar status-waiting">
             ⏳ Waiting for logos bridge...
         </div>
-        
+
         <div class="section">
             <h3>WebApp → Qt Communication</h3>
             <button id="changeQtLabelButton" onclick="changeQtLabel()" disabled>
@@ -193,7 +194,7 @@
             </div>
             <p id="pluginResponse" class="response-text">Waiting for input...</p>
         </div>
-        
+
         <div class="section">
             <h3>Event Log (Qt → WebApp)</h3>
             <div id="eventLog">
@@ -201,68 +202,62 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         let logosReady = false;
-        
-        function log(message, type = 'success') {
+
+        function log(message, type) {
+            type = type || 'success';
             const logEl = document.getElementById('eventLog');
             const entry = document.createElement('div');
             entry.className = 'log-entry ' + type;
-            
+
             const time = new Date().toLocaleTimeString();
             entry.innerHTML = '<span class="timestamp">' + time + '</span> ' + message;
-            
+
             logEl.appendChild(entry);
             logEl.scrollTop = logEl.scrollHeight;
-            
+
             while (logEl.children.length > 15) {
                 logEl.removeChild(logEl.firstChild);
             }
         }
-        
+
         function checkLogosBridge() {
             if (typeof window.logos !== 'undefined') {
                 logosReady = true;
-                
+
                 const statusEl = document.getElementById('status');
                 statusEl.textContent = '✅ Logos bridge ready!';
                 statusEl.className = 'status-bar status-ready';
-                
+
                 document.getElementById('changeQtLabelButton').disabled = false;
                 document.getElementById('joinChatButton').disabled = false;
                 document.getElementById('pluginCallButton').disabled = false;
                 document.getElementById('sendChatButton').disabled = false;
-                
+
                 window.logos.on('qtButtonClicked', function(data) {
                     log('📨 Received from Qt: ' + JSON.stringify(data), 'event');
                 });
-                
+
                 log('Bridge initialized successfully', 'success');
             } else {
                 setTimeout(checkLogosBridge, 100);
             }
         }
-        
+
         window.addEventListener('logos#initialized', checkLogosBridge);
-        
         checkLogosBridge();
-        
+
         async function changeQtLabel() {
-            if (!logosReady) {
-                log('Bridge not ready', 'error');
-                return;
-            }
-            
+            if (!logosReady) { log('Bridge not ready', 'error'); return; }
             const btn = document.getElementById('changeQtLabelButton');
             btn.disabled = true;
             btn.textContent = 'Sending...';
-            
             try {
                 const result = await window.logos.host.changeQtLabel(
                     'Hello from WebApp! (' + new Date().toLocaleTimeString() + ')'
                 );
-                
                 log('✅ Label changed: ' + JSON.stringify(result), 'success');
             } catch (error) {
                 log('❌ Error: ' + error.message, 'error');
@@ -273,15 +268,10 @@
         }
 
         async function joinChat() {
-            if (!logosReady) {
-                log('Bridge not ready', 'error');
-                return;
-            }
-
+            if (!logosReady) { log('Bridge not ready', 'error'); return; }
             const btn = document.getElementById('joinChatButton');
             btn.disabled = true;
             btn.textContent = 'Joining...';
-
             try {
                 const response = await window.logos.chat.joinChannel('baixa-chiado');
                 log('✅ Joined channel: ' + JSON.stringify(response), 'success');
@@ -294,25 +284,15 @@
         }
 
         async function sendChatMessage() {
-            if (!logosReady) {
-                log('Bridge not ready', 'error');
-                return;
-            }
-
+            if (!logosReady) { log('Bridge not ready', 'error'); return; }
             const input = document.getElementById('chatMessageInput');
             const button = document.getElementById('sendChatButton');
             const status = document.getElementById('chatSendStatus');
             const message = input.value.trim();
-
-            if (!message) {
-                status.textContent = 'Please enter a message first.';
-                return;
-            }
-
+            if (!message) { status.textContent = 'Please enter a message first.'; return; }
             button.disabled = true;
             button.textContent = 'Sending...';
             status.textContent = 'Sending to baixa-chiado...';
-
             try {
                 await window.logos.chat.sendMessage('baixa-chiado', 'webview-user', message);
                 status.textContent = 'Message sent to baixa-chiado ✔️';
@@ -328,25 +308,15 @@
         }
 
         async function callTestPlugin() {
-            if (!logosReady) {
-                log('Bridge not ready', 'error');
-                return;
-            }
-
+            if (!logosReady) { log('Bridge not ready', 'error'); return; }
             const input = document.getElementById('pluginInput');
             const button = document.getElementById('pluginCallButton');
             const responseEl = document.getElementById('pluginResponse');
             const value = input.value.trim();
-
-            if (!value) {
-                responseEl.textContent = 'Please enter a value first.';
-                return;
-            }
-
+            if (!value) { responseEl.textContent = 'Please enter a value first.'; return; }
             button.disabled = true;
             button.textContent = 'Calling...';
             responseEl.textContent = 'Calling logos.package_manager.testPluginCall...';
-
             try {
                 const response = await window.logos.package_manager.testPluginCall(value);
                 const rendered = (typeof response === 'object') ? JSON.stringify(response) : String(response);
@@ -362,4 +332,122 @@
         }
     </script>
 </body>
-</html>
+</html>`;
+
+// The bridge script that wires window.logos in the page.
+// (Was previously kept as src/qml/logos-script.js.)
+var bridgeScript = `(function() {
+    if (typeof window.logos !== "undefined") return;
+
+    var requestIdCounter = 0;
+    var pendingRequests = new Map();
+    var eventListeners = new Map();
+    var pluginCache = new Map();
+    var qtOutbox = Array.isArray(window.qtOutbox) ? window.qtOutbox : [];
+    window.qtOutbox = qtOutbox;
+    var drainOutbox = function() {
+        if (!qtOutbox.length) return [];
+        var batch = qtOutbox.slice();
+        qtOutbox.length = 0;
+        return batch;
+    };
+
+    function sendRequest(moduleName, methodName, args) {
+        return new Promise(function(resolve, reject) {
+            var requestId = ++requestIdCounter;
+            pendingRequests.set(requestId, { resolve: resolve, reject: reject });
+
+            var payload = {
+                type: "logos_request",
+                requestId: requestId,
+                module: moduleName,
+                method: methodName,
+                args: Array.isArray(args) ? args : []
+            };
+
+            qtOutbox.push(payload);
+
+            setTimeout(function() {
+                if (pendingRequests.has(requestId)) {
+                    pendingRequests.delete(requestId);
+                    reject(new Error("Request timeout"));
+                }
+            }, 30000);
+        });
+    }
+
+    window.addEventListener("message", function(event) {
+        var data = event.data;
+        if (!data) return;
+
+        if (data.type === "logos_response") {
+            var promise = pendingRequests.get(data.requestId);
+            if (promise) {
+                pendingRequests.delete(data.requestId);
+                if (data.error) {
+                    promise.reject(new Error(data.error));
+                } else {
+                    promise.resolve(data.result);
+                }
+            }
+        } else if (data.type === "logos_event") {
+            var listeners = eventListeners.get(data.eventName);
+            if (listeners) {
+                listeners.forEach(function(cb) {
+                    try { cb(data.data); } catch(e) { console.error(e); }
+                });
+            }
+        }
+    });
+
+    function getPluginProxy(name) {
+        if (pluginCache.has(name)) {
+            return pluginCache.get(name);
+        }
+        var proxy = new Proxy({}, {
+            get: function(_target, prop) {
+                if (prop === "then") return undefined;
+                if (typeof prop !== "string") return undefined;
+                return function() {
+                    return sendRequest(name, prop, Array.from(arguments));
+                };
+            }
+        });
+        pluginCache.set(name, proxy);
+        return proxy;
+    }
+
+    var logosRoot = {
+        on: function(eventName, callback) {
+            if (!eventListeners.has(eventName)) {
+                eventListeners.set(eventName, []);
+            }
+            eventListeners.get(eventName).push(callback);
+        },
+
+        removeListener: function(eventName, callback) {
+            var listeners = eventListeners.get(eventName);
+            if (listeners) {
+                var idx = listeners.indexOf(callback);
+                if (idx > -1) listeners.splice(idx, 1);
+            }
+        }
+    };
+
+    window.logos = new Proxy(logosRoot, {
+        get: function(target, prop) {
+            if (prop in target) {
+                return target[prop];
+            }
+            if (typeof prop !== "string") return undefined;
+            return getPluginProxy(prop);
+        }
+    });
+
+    window.__logosBridge = {
+        drain: drainOutbox
+    };
+    window._qtDrain = drainOutbox;
+
+    window.dispatchEvent(new Event("logos#initialized"));
+})();`;
